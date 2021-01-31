@@ -7,7 +7,8 @@ use euclid::{Transform3D, Vector3D};
 
 use gleam::gl::Gl;
 use gleam::gl;
-use glutin::GlContext;
+use glutin::event::{Event, WindowEvent};
+use glutin::event_loop::ControlFlow;
 
 use std::rc::Rc;
 
@@ -400,22 +401,21 @@ fn load_shader(gl: &Rc<Gl>, shader_type: gl::GLenum, source: &[u8]) -> gl::GLuin
 
 fn main() {
     
-    let mut events_loop = glutin::EventsLoop::new();
-    let window = glutin::WindowBuilder::new()
+    let mut events_loop = glutin::event_loop::EventLoop::new();
+    let window_builder = glutin::window::WindowBuilder::new()
         .with_title("Hello, world!")
-        .with_dimensions(1024, 768);
-    let context = glutin::ContextBuilder::new()
+        .with_inner_size(glutin::dpi::LogicalSize::new(1024.0, 768.0));
+    let gl_window = glutin::ContextBuilder::new()
         .with_vsync(true)
         .with_gl(glutin::GlRequest::GlThenGles {
-        opengl_version: (3, 2),
-        opengles_version: (3, 0),
-    });
+            opengl_version: (3, 2),
+            opengles_version: (3, 0),
+        })
+        .build_windowed(window_builder, &events_loop)
+        .unwrap();
 
-    let gl_window = glutin::GlWindow::new(window, context, &events_loop).unwrap();
+    let gl_window = unsafe { gl_window.make_current().unwrap() };
 
-    unsafe {
-        gl_window.make_current().unwrap();
-    }
 
     let options = Options { pbo: false, client_storage: false, texture_array: false, texture_storage: false, swizzle: false };
 
@@ -498,17 +498,20 @@ fn main() {
 
     let mut running = true;
     let mut cube_rotation: f32 = 0.;
-    while running {
-        events_loop.poll_events(|event| {
-            match event {
-                glutin::Event::WindowEvent{ event, .. } => match event {
-                    glutin::WindowEvent::Closed => running = false,
-                    glutin::WindowEvent::Resized(w, h) => gl_window.resize(w, h),
-                    _ => ()
-                },
-                _ => ()
-            }
-        });
+    events_loop.run(move |event, _, control_flow| {
+        match event {
+            Event::LoopDestroyed => return,
+            Event::WindowEvent { event, .. } => match event {
+                WindowEvent::Resized(physical_size) => {
+                    gl_window.resize(physical_size)
+                }
+                WindowEvent::CloseRequested => {
+                    *control_flow = ControlFlow::Exit
+                }
+                _ => (),
+            },
+            _ => ()
+        }
 
 
         // Bind the texture to texture unit 0
@@ -661,5 +664,5 @@ fn main() {
 
 
         cube_rotation += 0.1;
-    }
+    });
 }
