@@ -42,7 +42,7 @@ struct Options {
 }
 
 
-fn init_shader_program(gl: &Rc<Gl>, vs_source: &[u8], fs_source: &[u8]) -> gl::GLuint {
+fn init_shader_program(gl: &Rc<dyn Gl>, vs_source: &[u8], fs_source: &[u8]) -> gl::GLuint {
     let vertex_shader = load_shader(gl, gl::VERTEX_SHADER, vs_source);
     let fragment_shader = load_shader(gl, gl::FRAGMENT_SHADER, fs_source);
     let shader_program = gl.create_program();
@@ -67,7 +67,7 @@ struct Buffers {
     indices: GLuint
 }
 
-fn init_buffers(gl: &Rc<gl::Gl>, texture_rectangle: bool, texture_width: i32, texture_height: i32) -> Buffers {
+fn init_buffers(gl: &Rc<dyn gl::Gl>, texture_rectangle: bool, texture_width: i32, texture_height: i32) -> Buffers {
     let position_buffer = gl.gen_buffers(1)[0];
 
     gl.bind_buffer(gl::ARRAY_BUFFER, position_buffer);
@@ -292,7 +292,7 @@ struct Texture {
 }
 
 
-fn load_texture(gl: &Rc<gl::Gl>, image: &Image, target: GLuint, internal_format: GLuint, src_format: GLuint, src_type: GLuint, options: &Options) -> Texture {
+fn load_texture(gl: &Rc<dyn gl::Gl>, image: &Image, target: GLuint, internal_format: GLuint, src_format: GLuint, src_type: GLuint, options: &Options) -> Texture {
     let texture = gl.gen_textures(1)[0];
 
     gl.bind_texture(target, texture);
@@ -304,7 +304,7 @@ fn load_texture(gl: &Rc<gl::Gl>, image: &Image, target: GLuint, internal_format:
         //gl.texture_range_apple(target, &image.data[..]);
 
         // both of these seem to work ok on Intel
-        let storage = gl::STORAGE_SHARED_APPLE;
+        let _storage = gl::STORAGE_SHARED_APPLE;
         let storage = gl::STORAGE_CACHED_APPLE;
         gl.tex_parameter_i(target, gl::TEXTURE_STORAGE_HINT_APPLE, storage as gl::GLint);
         gl.pixel_store_i(gl::UNPACK_CLIENT_STORAGE_APPLE, true as gl::GLint);
@@ -385,7 +385,7 @@ fn load_texture(gl: &Rc<gl::Gl>, image: &Image, target: GLuint, internal_format:
 }
 
 
-fn load_shader(gl: &Rc<Gl>, shader_type: gl::GLenum, source: &[u8]) -> gl::GLuint {
+fn load_shader(gl: &Rc<dyn Gl>, shader_type: gl::GLenum, source: &[u8]) -> gl::GLuint {
     let shader = gl.create_shader(shader_type);
     gl.shader_source(shader, &[source]);
     gl.compile_shader(shader);
@@ -401,7 +401,7 @@ fn load_shader(gl: &Rc<Gl>, shader_type: gl::GLenum, source: &[u8]) -> gl::GLuin
 
 fn main() {
     
-    let mut events_loop = glutin::event_loop::EventLoop::new();
+    let events_loop = glutin::event_loop::EventLoop::new();
     let window_builder = glutin::window::WindowBuilder::new()
         .with_title("Hello, world!")
         .with_inner_size(glutin::dpi::LogicalSize::new(1024.0, 768.0));
@@ -467,7 +467,7 @@ fn main() {
     ").into_bytes();
 
 
-    let mut glc = unsafe { gl::GlFns::load_with(|symbol| gl_window.get_proc_address(symbol) as *const _) };
+    let glc = unsafe { gl::GlFns::load_with(|symbol| gl_window.get_proc_address(symbol) as *const _) };
     let gl = ErrorCheckingGl::wrap(glc);// Rc::get_mut(&mut glc).unwrap();
 
     let shader_program = init_shader_program(&gl, vs_source, &fs_source);
@@ -481,7 +481,7 @@ fn main() {
     let u_sampler = gl.get_uniform_location(shader_program, "u_sampler");
 
 
-    let mut image = load_image(texture_src_type);
+    let image = load_image(texture_src_type);
     let buffers = init_buffers(&gl, texture_rectangle, image.width, image.height);
 
 
@@ -496,7 +496,7 @@ fn main() {
     gl.bind_vertex_array(vao);
 
 
-    let mut running = true;
+    let _running = true;
     let mut cube_rotation: f32 = 0.;
     events_loop.run(move |event, _, control_flow| {
         match event {
