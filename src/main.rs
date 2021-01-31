@@ -2,6 +2,7 @@ extern crate gleam;
 extern crate glutin;
 extern crate libc;
 extern crate euclid;
+extern crate core_foundation;
 
 use euclid::{Transform3D, Vector3D};
 
@@ -398,9 +399,21 @@ fn load_shader(gl: &Rc<dyn Gl>, shader_type: gl::GLenum, source: &[u8]) -> gl::G
     return shader;
 }
 
+fn allow_gpu_switching() {
+    use core_foundation::string::CFString;
+    use core_foundation::base::TCFType;
+    use core_foundation::boolean::CFBoolean;
+
+    let i = core_foundation::bundle::CFBundle::main_bundle().info_dictionary();
+    let mut i = unsafe { i.to_mutable() };
+    i.set(CFString::new("NSSupportsAutomaticGraphicsSwitching"), CFBoolean::true_value().into_CFType());
+}
+
 
 fn main() {
-    
+
+    allow_gpu_switching();
+
     let events_loop = glutin::event_loop::EventLoop::new();
     let window_builder = glutin::window::WindowBuilder::new()
         .with_title("Hello, world!")
