@@ -64,7 +64,7 @@ fn init_shader_program(gl: &Rc<dyn Gl>, vs_source: &[u8], fs_source: &[u8]) -> g
 
 struct Buffers {
     position: GLuint,
-    texture_coord: GLuint,
+    instance_data: GLuint,
     indices: GLuint
 }
 
@@ -115,47 +115,48 @@ fn init_buffers(gl: &Rc<dyn gl::Gl>, texture_rectangle: bool, texture_width: i32
     gl.buffer_data_untyped(gl::ARRAY_BUFFER, std::mem::size_of_val(&positions) as isize, positions.as_ptr() as *const libc::c_void, gl::STATIC_DRAW);
 
 
-    let texture_coord_buffer = gl.gen_buffers(1)[0];
+    let instance_data_buffer = gl.gen_buffers(1)[0];
 
-    gl.bind_buffer(gl::ARRAY_BUFFER, texture_coord_buffer);
+    gl.bind_buffer(gl::ARRAY_BUFFER, instance_data_buffer);
 
     let width = if texture_rectangle { texture_width as f32 } else { 1.0 };
     let height = if texture_rectangle { texture_height as f32 } else { 1.0 };
 
-    let texture_coordinates = [
+    let instance_data: i32 = 1<<8;
+    let data = [
         // Front
-        0.0f32,  0.0,
-        width,  0.0,
-        width,  height,
-        0.0,  height,
+        instance_data, instance_data,  instance_data, instance_data,
+        instance_data, instance_data,  instance_data, instance_data,
+        instance_data, instance_data,  instance_data, instance_data,
+        instance_data, instance_data,  instance_data, instance_data,
         // Back
-        0.0,  0.0,
-        width,  0.0,
-        width,  height,
-        0.0,  height,
+        instance_data, instance_data,  instance_data, instance_data,
+        instance_data, instance_data,  instance_data, instance_data,
+        instance_data, instance_data,  instance_data, instance_data,
+        instance_data, instance_data,  instance_data, instance_data,
         // Top
-        0.0,  0.0,
-        width,  0.0,
-        width,  height,
-        0.0,  height,
+        instance_data, instance_data,  instance_data, instance_data,
+        instance_data, instance_data,  instance_data, instance_data,
+        instance_data, instance_data,  instance_data, instance_data,
+        instance_data, instance_data,  instance_data, instance_data,
         // Bottom
-        0.0,  0.0,
-        width,  0.0,
-        width,  height,
-        0.0,  height,
+        instance_data, instance_data,  instance_data, instance_data,
+        instance_data, instance_data,  instance_data, instance_data,
+        instance_data, instance_data,  instance_data, instance_data,
+        instance_data, instance_data,  instance_data, instance_data,
         // Right
-        0.0,  0.0,
-        width,  0.0,
-        width,  height,
-        0.0,  height,
+        instance_data, instance_data,  instance_data, instance_data,
+        instance_data, instance_data,  instance_data, instance_data,
+        instance_data, instance_data,  instance_data, instance_data,
+        instance_data, instance_data,  instance_data, instance_data,
         // Left
-        0.0,  0.0,
-        width,  0.0,
-        width,  height,
-        0.0,  height,
+        instance_data, instance_data,  instance_data, instance_data,
+        instance_data, instance_data,  instance_data, instance_data,
+        instance_data, instance_data,  instance_data, instance_data,
+        instance_data, instance_data,  instance_data, instance_data,
     ];
 
-    gl.buffer_data_untyped(gl::ARRAY_BUFFER, std::mem::size_of_val(&texture_coordinates) as isize, texture_coordinates.as_ptr() as *const libc::c_void, gl::STATIC_DRAW);
+    gl.buffer_data_untyped(gl::ARRAY_BUFFER, std::mem::size_of_val(&data) as isize, data.as_ptr() as *const libc::c_void, gl::STATIC_DRAW);
 
     // Build the element array buffer; this specifies the indices
     // into the vertex arrays for each face's vertices.
@@ -184,7 +185,7 @@ fn init_buffers(gl: &Rc<dyn gl::Gl>, texture_rectangle: bool, texture_width: i32
 
     Buffers {
         position: position_buffer,
-        texture_coord: texture_coord_buffer,
+        instance_data: instance_data_buffer,
         indices: index_buffer,
     }
 }
@@ -456,26 +457,86 @@ fn main() {
 
 
     let vs_source = b"
-    #version 140
+#version 140
 
-    in vec4 a_vertex_position;
-    in vec2 a_texture_coord;
-    uniform mat4 u_model_view_matrix;
-    uniform mat4 u_projection_matrix;
-    out vec2 v_texture_coord;
-    void main(void) {
-        gl_Position = u_projection_matrix * u_model_view_matrix * a_vertex_position;
-        v_texture_coord = a_texture_coord;
-    }";
+        precision highp int;
+
+
+uniform int uMode;
+uniform mat4 u_model_view_matrix;
+uniform mat4 u_projection_matrix;
+in vec4 aPosition;
+uniform sampler2D sColor0;
+uniform sampler2D sRenderTasks;
+uniform sampler2D sGpuCache;
+uniform sampler2D sTransformPalette;
+uniform sampler2D sPrimitiveHeadersF;
+uniform isampler2D sPrimitiveHeadersI;
+in ivec4 aData;
+flat out vec4 v_color;
+
+void main ()
+{
+    /* 
+  int color_mode_2;
+  int instance_flags_8;
+  instance_flags_8 = (aData.z >> 16);
+  color_mode_2  = (instance_flags_8 & 255);
+*/
+  //color_mode_2 += 8;
+  // even though transform_m_15[2] is not read it's important for this test
+  //mat4 transform_m_15;
+  //transform_m_15[2] = texelFetchOffset (sTransformPalette, ivec2(0, 0), 0, ivec2(0, 0));
+
+  // this variable is important too
+  //vec4 tmpvar_33;
+  //tmpvar_33 = texelFetchOffset (sGpuCache, ivec2(0, 9), 0, ivec2(0, 0));
+
+  gl_Position = u_projection_matrix * u_model_view_matrix * aPosition;
+
+  //gl_Position = uTransform * vec4((vec2(60, 80) + (vec2(80, 100) * aPosition)), 0, 1);
+
+  //
+  //
+  // HERE IS THE BUG
+  //
+  // color_mode_2 is 1, but the first if branch is not entered.
+  // The second if branch is entered!
+  //
+  // Blue text: things work correctly
+  // Black text: the bug appears
+  // Purple text: unexpected
+  //
+  /*
+  if (color_mode_2 == 1) {
+    v_color = vec4(0.0, 0.0, 1.0, 1.0); // blue
+  } else if (color_mode_2 == 2) {
+    v_color = vec4(0.0, 0.0, 0.0, 1.0); // black
+  } else if (color_mode_2 == 0) {
+    v_color = vec4(1.0, 1.0, 0.0, 1.0); // yellow
+  } else {
+    v_color = vec4(1.0, 1.0, 1.0, 1.0); // purple
+  };*/
+  if (aData.x > (1<<31)) {
+      v_color = vec4(0, 1, 0, 1);
+    } else if (aData.x == 0)  {
+        v_color = vec4(1, 1, 0, 1);
+  } else {
+  v_color = vec4((aData.x >> 16)/255., aData.x/255., (aData.x >> 8)/255., 1.0);
+  }
+}
+
+
+    ";
 
     let fs_source = format!("
     #version 140
 
-    in vec2 v_texture_coord;
+    flat in vec4 v_color;
     out vec4 fragment_color;
     uniform float tint;
     void main(void) {{
-        fragment_color = vec4(0.5)*tint;
+        fragment_color = v_color;
     }}
     ").into_bytes();
 
@@ -486,8 +547,8 @@ fn main() {
     let shader_program = init_shader_program(&gl, vs_source, &fs_source);
 
 
-    let vertex_position = gl.get_attrib_location(shader_program, "a_vertex_position");
-    let texture_coord = gl.get_attrib_location(shader_program, "a_texture_coord");
+    let vertex_position = gl.get_attrib_location(shader_program, "aPosition");
+    let instance_data = gl.get_attrib_location(shader_program, "aData");
 
     let projection_matrix_loc = gl.get_uniform_location(shader_program, "u_projection_matrix");
     let model_view_matrix_loc = gl.get_uniform_location(shader_program, "u_model_view_matrix");
@@ -634,14 +695,16 @@ fn main() {
         }
 
         {
-            let num_components = 2;
-            let ty = gl::FLOAT;
+            let num_components = 4;
+            let ty = gl::INT;
             let normalize = false;
             let stride = 0;
             let offset = 0;
-            gl.bind_buffer(gl::ARRAY_BUFFER, buffers.texture_coord);
-            gl.vertex_attrib_pointer(texture_coord as u32, num_components, ty, normalize, stride, offset);
-            gl.enable_vertex_attrib_array(texture_coord as u32);
+            gl.bind_buffer(gl::ARRAY_BUFFER, buffers.instance_data);
+            gl.vertex_attrib_pointer(instance_data as u32, num_components, ty, normalize, stride, offset);
+            gl.enable_vertex_attrib_array(instance_data as u32);
+            println!("{:?}", gl.get_error());
+
         }
 
         gl.bind_buffer(gl::ELEMENT_ARRAY_BUFFER, buffers.indices);
