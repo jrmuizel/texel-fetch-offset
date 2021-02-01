@@ -122,7 +122,7 @@ fn init_buffers(gl: &Rc<dyn gl::Gl>, texture_rectangle: bool, texture_width: i32
     let width = if texture_rectangle { texture_width as f32 } else { 1.0 };
     let height = if texture_rectangle { texture_height as f32 } else { 1.0 };
 
-    let instance_data: i32 = 1<<8;
+    let instance_data: i32 = 3<<16;
     let data = [
         // Front
         instance_data, instance_data,  instance_data, instance_data,
@@ -477,53 +477,23 @@ flat out vec4 v_color;
 
 void main ()
 {
-    /* 
+    
   int color_mode_2;
   int instance_flags_8;
   instance_flags_8 = (aData.z >> 16);
   color_mode_2  = (instance_flags_8 & 255);
-*/
-  //color_mode_2 += 8;
-  // even though transform_m_15[2] is not read it's important for this test
-  //mat4 transform_m_15;
-  //transform_m_15[2] = texelFetchOffset (sTransformPalette, ivec2(0, 0), 0, ivec2(0, 0));
 
   // this variable is important too
-  //vec4 tmpvar_33;
-  //tmpvar_33 = texelFetchOffset (sGpuCache, ivec2(0, 9), 0, ivec2(0, 0));
+  vec4 tmpvar_33;
+  tmpvar_33 = texelFetchOffset (sGpuCache, ivec2(0, 3), 0, ivec2(0, 0));
 
   gl_Position = u_projection_matrix * u_model_view_matrix * aPosition;
 
-  //gl_Position = uTransform * vec4((vec2(60, 80) + (vec2(80, 100) * aPosition)), 0, 1);
-
-  //
-  //
-  // HERE IS THE BUG
-  //
-  // color_mode_2 is 1, but the first if branch is not entered.
-  // The second if branch is entered!
-  //
-  // Blue text: things work correctly
-  // Black text: the bug appears
-  // Purple text: unexpected
-  //
-  /*
-  if (color_mode_2 == 1) {
+  if (color_mode_2 == 3) {
     v_color = vec4(0.0, 0.0, 1.0, 1.0); // blue
-  } else if (color_mode_2 == 2) {
-    v_color = vec4(0.0, 0.0, 0.0, 1.0); // black
-  } else if (color_mode_2 == 0) {
-    v_color = vec4(1.0, 1.0, 0.0, 1.0); // yellow
   } else {
     v_color = vec4(1.0, 1.0, 1.0, 1.0); // purple
-  };*/
-  if (aData.x > (1<<31)) {
-      v_color = vec4(0, 1, 0, 1);
-    } else if (aData.x == 0)  {
-        v_color = vec4(1, 1, 0, 1);
-  } else {
-  v_color = vec4((aData.x >> 16)/255., aData.x/255., (aData.x >> 8)/255., 1.0);
-  }
+  };
 }
 
 
@@ -697,13 +667,11 @@ void main ()
         {
             let num_components = 4;
             let ty = gl::INT;
-            let normalize = false;
             let stride = 0;
             let offset = 0;
             gl.bind_buffer(gl::ARRAY_BUFFER, buffers.instance_data);
-            gl.vertex_attrib_pointer(instance_data as u32, num_components, ty, normalize, stride, offset);
+            gl.vertex_attrib_i_pointer(instance_data as u32, num_components, ty, stride, offset);
             gl.enable_vertex_attrib_array(instance_data as u32);
-            println!("{:?}", gl.get_error());
 
         }
 
